@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AK Pack — Live Feed</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body{overflow-y:auto;overflow-x:hidden}
+.topbar{position:sticky;top:0;background:rgba(10,22,40,.96);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:100}
+.logo-wrap{display:flex;align-items:center;gap:9px}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 12px var(--accent-glow)}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.08em}
+.live-badge{display:flex;align-items:center;gap:5px;background:rgba(0,200,150,.1);border:1px solid rgba(0,200,150,.25);padding:5px 10px;border-radius:20px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--accent)}
+.stats-strip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.ss-stat{text-align:center}
+.ss-val{font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1}
+.ss-label{font-size:8px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;margin-top:1px}
+.ss-stat:nth-child(1) .ss-val{color:var(--blue)}
+.ss-stat:nth-child(2) .ss-val{color:var(--accent)}
+.ss-stat:nth-child(3) .ss-val{color:var(--text2)}
+.feed{padding:12px 14px;display:flex;flex-direction:column;gap:8px;padding-bottom:72px}
+.feed-sec{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);padding:3px 0}
+.fc{border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:all .25s cubic-bezier(.34,1.56,.64,1);animation:cIn .35s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes cIn{from{opacity:0;transform:translateY(-12px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.fc:active{transform:scale(.98)}
+.fc.green{background:rgba(0,200,150,.05);border-color:rgba(0,200,150,.2)}
+.fc.yellow{background:rgba(245,200,66,.05);border-color:rgba(245,200,66,.2)}
+.fc.red{background:rgba(224,85,85,.05);border-color:rgba(224,85,85,.18)}
+.fc-main{padding:11px 13px;display:flex;align-items:center;gap:10px}
+.fc-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.fc.green .fc-dot{background:var(--accent);box-shadow:0 0 7px rgba(0,200,150,.5)}
+.fc.yellow .fc-dot{background:var(--yellow);box-shadow:0 0 7px rgba(245,200,66,.5)}
+.fc.red .fc-dot{background:var(--red);box-shadow:0 0 7px rgba(224,85,85,.5)}
+.fc-info{flex:1;min-width:0}
+.fc-name{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fc-meta{font-size:11px;color:var(--text2);margin-top:1px}
+.fc-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.fc-action{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.08em}
+.fc.green .fc-action{color:var(--accent)}
+.fc.yellow .fc-action{color:var(--yellow)}
+.fc.red .fc-action{color:var(--red)}
+.fc-time{font-size:10px;color:var(--text3);font-family:'Barlow Condensed',sans-serif}
+.fc-details{max-height:0;overflow:hidden;transition:max-height .3s ease;border-top:0 solid var(--border)}
+.fc-details.open{max-height:200px;border-top-width:1px}
+.fc-details-inner{padding:11px 13px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dr{display:flex;flex-direction:column;gap:1px}
+.dr-l{font-size:8px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif}
+.dr-v{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:var(--text)}
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+.empty-text{font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:.04em}
+.refresh-bar{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;justify-content:space-between}
+.rt{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text3);letter-spacing:.06em}
+.rp{height:2px;background:var(--border);border-radius:1px;overflow:hidden;width:56px}
+.rf{height:100%;background:var(--accent);border-radius:1px;animation:refill 8s linear infinite}
+@keyframes refill{from{width:100%}to{width:0%}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-wrap">
+    <div class="logo-icon">🐺</div>
+    <div class="logo-text">Live Feed</div>
+  </div>
+  <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+</div>
+
+<div class="stats-strip">
+  <div class="ss-stat"><div class="ss-val" id="inC">0</div><div class="ss-label">Inside Now</div></div>
+  <div class="ss-stat"><div class="ss-val" id="ciC">0</div><div class="ss-label">Check-ins</div></div>
+  <div class="ss-stat"><div class="ss-val" id="exC">0</div><div class="ss-label">Completed</div></div>
+</div>
+
+<div class="feed" id="feed">
+  <div class="feed-sec">Today's Activity</div>
+  <div class="empty" id="emptyState">
+    <div class="empty-icon">🐺</div>
+    <div class="empty-text">Loading...</div>
+  </div>
+</div>
+
+<div class="refresh-bar">
+  <div class="rt">Refreshes every 8s</div>
+  <div class="rp"><div class="rf" id="rf"></div></div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────
+const SHEET_ID   = '1Vo8k_hEm6OrJt-Bqf1T8vxcMH4_U9DoXkxsJPt9lKsw';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymq_VgX869A9OD-U97sQwDlq2HT_RsX1IxPybyuq1KjHqyLgN905FA2VWyqYZ9Fx8T/exec';
+
+// Attendance: 0=Date | 1=Membership ID | 2=Client name | 3=Check In Time | 4=Check Out Time | 5=Status
+// Members:    0=Client name | 1=Contact no | 2=Package Details | 3=Package Validity | 4=Status | 5=Created On | 6=Membership ID
+
+let memberCache = {};
+
+// ── HELPER: Parse any time value from gviz ──
+// gviz sends times as: {v: 0.708, f: "5:00:00 PM"} OR {v: "Date(1899,11,30,17,5,0)"}
+function parseTime(cell) {
+  if (!cell) return '—';
+
+  // Use formatted value if it's a clean time string (not containing "Date(")
+  const f = String(cell.f || '');
+  if (f && !f.includes('Date(') && !f.includes('1899')) return f;
+
+  const v = cell.v;
+  if (v === null || v === undefined) return '—';
+
+  // Numeric fraction of day (e.g. 0.708333 = 17:00)
+  if (typeof v === 'number') {
+    const totalSecs = Math.round(v * 86400);
+    const h = Math.floor(totalSecs / 3600) % 24;
+    const m = Math.floor((totalSecs % 3600) / 60);
+    const ap = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ap}`;
+  }
+
+  // String "Date(1899,11,30,17,5,0,0)" — positions: year,month,day,hour,min,sec
+  const s = String(v);
+  const m2 = s.match(/Date\(\d+,\d+,\d+,(\d+),(\d+)/);
+  if (m2) {
+    const h = parseInt(m2[1]);
+    const m = parseInt(m2[2]);
+    const ap = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ap}`;
+  }
+
+  return s || '—';
+}
+
+// ── HELPER: Parse any date value → DD/MM/YYYY ──
+function parseDate(cell) {
+  if (!cell) return '';
+  const f = String(cell.f || '');
+  const v = cell.v;
+
+  // Use formatted value if available
+  if (f && !f.includes('Date(') && !f.includes('1899')) {
+    // Normalize separators and order
+    let s = f.replace(/-/g, '/').replace(/\./g, '/');
+    // YYYY/MM/DD → DD/MM/YYYY
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) {
+      const p = s.split('/'); s = `${p[2]}/${p[1]}/${p[0]}`;
+    }
+    return s;
+  }
+
+  // Excel serial date number
+  if (typeof v === 'number') {
+    const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+    return d.toLocaleDateString('en-GB');
+  }
+
+  return '';
+}
+
+// ── HELPER: Parse expiry → {display, sc, daysLeft} ──
+function parseExpiry(raw) {
+  if (!raw || raw === '—' || raw === 'Package Validity') return { display:'—', sc:'active', daysLeft:'—' };
+  let s = String(raw).trim();
+  let day, mon, yr;
+
+  // gviz Date object: Date(2026,3,5) — month is 0-based!
+  const gvizMatch = s.match(/Date\((\d+),(\d+),(\d+)\)/);
+  if (gvizMatch) {
+    yr = parseInt(gvizMatch[1]);
+    mon = parseInt(gvizMatch[2]); // 0-based already
+    day = parseInt(gvizMatch[3]);
+  }
+  // DD/MM/YYYY or DD-MM-YYYY
+  else if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(s)) {
+    const p = s.split(/[\/\-]/);
+    day = parseInt(p[0]); mon = parseInt(p[1]) - 1; yr = parseInt(p[2]);
+  }
+  // YYYY/MM/DD or YYYY-MM-DD
+  else if (/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/.test(s)) {
+    const p = s.split(/[\/\-]/);
+    yr = parseInt(p[0]); mon = parseInt(p[1]) - 1; day = parseInt(p[2]);
+  }
+  // Apr 5, 2026 or 5 Apr 2026
+  else {
+    const months = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    const parts = s.replace(/,/g,'').split(/\s+/);
+    parts.forEach((p, i) => {
+      const ml = p.toLowerCase().substring(0,3);
+      if (months[ml] !== undefined) { mon = months[ml]; day = parseInt(parts[i-1] || parts[i+1]); }
+      else if (/^\d{4}$/.test(p)) yr = parseInt(p);
+    });
+  }
+
+  if (day === undefined || mon === undefined || yr === undefined || isNaN(day) || isNaN(mon) || isNaN(yr)) {
+    return { display: s, sc:'active', daysLeft:'—' };
+  }
+
+  const display = String(day).padStart(2,'0') + '/' + String(mon+1).padStart(2,'0') + '/' + yr;
+  const ed = new Date(yr, mon, day);
+  const now = new Date(); now.setHours(0,0,0,0);
+  const diff = Math.ceil((ed - now) / 864e5);
+  return { display, sc: diff<=0?'expired':diff<=7?'warning':'active', daysLeft: diff<=0?0:diff };
+}
+
+// ── LOAD MEMBERS ────────────────────────────
+function loadMembers() {
+  const cb  = 'akM_' + Date.now();
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Members&tq=select%20*&tqx=responseHandler:${cb}`;
+
+  window[cb] = function(data) {
+    try {
+      const rows = data.table.rows || [];
+      rows.forEach(r => {
+        const id = String(r.c[6]?.v || r.c[6]?.f || '').trim();
+        if (!id || id === 'Membership ID') return;
+
+        // Get expiry — try formatted string first
+        const expRaw = r.c[3]?.f || String(r.c[3]?.v || '');
+        const expiry = parseExpiry(expRaw);
+
+        memberCache[id] = {
+          name:     r.c[0]?.v || '—',
+          contact:  r.c[1]?.v || '—',
+          pkg:      r.c[2]?.v || '—',
+          exp:      expiry.display,
+          daysLeft: expiry.daysLeft,
+          sc:       expiry.sc
+        };
+      });
+      console.log('[AK Live] Members:', Object.keys(memberCache).length, memberCache);
+    } catch(e) {
+      console.error('[AK Live] Members error:', e.message);
+    }
+    delete window[cb];
+    loadAttendance();
+  };
+
+  const s = document.createElement('script');
+  s.onerror = () => { console.error('[AK Live] Members load failed'); setTimeout(loadAttendance, 2000); };
+  s.src = url;
+  document.head.appendChild(s);
+}
+
+// ── LOAD ATTENDANCE ──────────────────────────
+function loadAttendance() {
+  const today = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY
+  console.log('[AK Live] Today:', today);
+
+  const cb  = 'akA_' + Date.now();
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Attendance&tq=select%20*&tqx=responseHandler:${cb}`;
+
+  window[cb] = function(data) {
+    try {
+      const rows = data.table.rows || [];
+      console.log('[AK Live] Attendance rows:', rows.length);
+
+      const todayRows = [];
+
+      rows.forEach(r => {
+        const dt = parseDate(r.c[0]);
+        if (dt !== today) return;
+
+        todayRows.push({
+          id:       String(r.c[1]?.v || '').trim(),
+          name:     r.c[2]?.v || '—',
+          checkIn:  parseTime(r.c[3]),
+          checkOut: parseTime(r.c[4]),
+          status:   r.c[5]?.v || '—'
+        });
+      });
+
+      console.log('[AK Live] Today rows:', todayRows.length);
+      renderCards(todayRows.reverse()); // newest first
+
+    } catch(e) {
+      console.error('[AK Live] Attendance error:', e.message);
+      showError('Error: ' + e.message);
+    }
+    delete window[cb];
+  };
+
+  const s = document.createElement('script');
+  s.onerror = () => {
+    console.error('[AK Live] Script load failed, retrying in 3s...');
+    setTimeout(loadAttendance, 3000);
+  };
+  s.src = url;
+  document.head.appendChild(s);
+}
+
+// ── RENDER ───────────────────────────────────
+function renderCards(records) {
+  const feed = document.getElementById('feed');
+  feed.querySelectorAll('.fc').forEach(c => c.remove());
+  const em = document.getElementById('emptyState');
+
+  if (!records.length) {
+    em.style.display = 'block';
+    em.querySelector('.empty-text').textContent = 'No activity today yet';
+    document.getElementById('inC').textContent = '0';
+    document.getElementById('ciC').textContent = '0';
+    document.getElementById('exC').textContent = '0';
+    return;
+  }
+
+  em.style.display = 'none';
+  let ci = 0, completed = 0;
+  const insideSet = new Set();
+
+  records.forEach((r, i) => {
+    ci++;
+    // "Still inside" = checkOut is empty or '—'
+    const isInside = !r.checkOut || r.checkOut === '—' || r.checkOut.trim() === '';
+    if (isInside) insideSet.add(r.id);
+    else completed++;
+
+    // Membership status from cache
+    const mem = memberCache[r.id] || {};
+    const sc  = mem.sc || 'active';
+    const cl  = sc === 'expired' ? 'red' : sc === 'warning' ? 'yellow' : 'green';
+
+    // Days left display
+    const dlVal   = mem.daysLeft;
+    const dlColor = cl === 'red' ? 'var(--red)' : cl === 'yellow' ? 'var(--yellow)' : 'var(--accent)';
+    const dlText  = dlVal === undefined || dlVal === '—' ? '—'
+                  : dlVal === 0 ? 'EXPIRED'
+                  : dlVal + ' days';
+
+    const card = document.createElement('div');
+    card.className = `fc ${cl}`;
+    card.style.animationDelay = `${i * 0.04}s`;
+    card.innerHTML = `
+      <div class="fc-main">
+        <div class="fc-dot"></div>
+        <div class="fc-info">
+          <div class="fc-name">${r.name}</div>
+          <div class="fc-meta">ID: ${r.id}</div>
+        </div>
+        <div class="fc-right">
+          <div class="fc-action">${isInside ? '✅ INSIDE' : '🏁 DONE'}</div>
+          <div class="fc-time">${isInside ? 'In: ' + r.checkIn : 'Out: ' + r.checkOut}</div>
+        </div>
+      </div>
+      <div class="fc-details">
+        <div class="fc-details-inner">
+          <div class="dr">
+            <div class="dr-l">Package</div>
+            <div class="dr-v">${mem.pkg || '—'}</div>
+          </div>
+          <div class="dr">
+            <div class="dr-l">Expiry</div>
+            <div class="dr-v">${mem.exp || '—'}</div>
+          </div>
+          <div class="dr">
+            <div class="dr-l">Check In</div>
+            <div class="dr-v" style="color:var(--accent)">${r.checkIn}</div>
+          </div>
+          <div class="dr">
+            <div class="dr-l">Check Out</div>
+            <div class="dr-v" style="color:${isInside ? 'var(--text3)' : 'var(--text2)'}">
+              ${isInside ? 'Still inside' : r.checkOut}
+            </div>
+          </div>
+          <div class="dr">
+            <div class="dr-l">Days Left</div>
+            <div class="dr-v" style="color:${dlColor}">${dlText}</div>
+          </div>
+          <div class="dr">
+            <div class="dr-l">Contact</div>
+            <div class="dr-v">${mem.contact || '—'}</div>
+          </div>
+        </div>
+      </div>`;
+
+    card.querySelector('.fc-main').addEventListener('click', () =>
+      card.querySelector('.fc-details').classList.toggle('open'));
+    feed.appendChild(card);
+  });
+
+  document.getElementById('inC').textContent = insideSet.size;
+  document.getElementById('ciC').textContent = ci;
+  document.getElementById('exC').textContent = completed;
+}
+
+function showError(msg) {
+  const em = document.getElementById('emptyState');
+  em.style.display = 'block';
+  em.querySelector('.empty-icon').textContent = '🔄';
+  em.querySelector('.empty-text').textContent = 'Connecting to sheet...';
+  console.error('[AK Live] Error:', msg);
+}
+
+// ── AUTO REFRESH ─────────────────────────────
+function refresh() {
+  memberCache = {};
+  loadMembers();
+  const rf = document.getElementById('rf');
+  rf.style.animation = 'none';
+  rf.offsetHeight;
+  rf.style.animation = 'refill 8s linear infinite';
+}
+
+loadMembers();
+setInterval(refresh, 8000);
+</script>
+</body>
+</html>
